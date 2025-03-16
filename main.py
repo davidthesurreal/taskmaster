@@ -3,6 +3,7 @@ from telegram import Update, InlineKeyboardButton,InlineKeyboardMarkup, ReplyKey
 from appwrite.client import Client
 from appwrite.services.users import Users
 from appwrite.services.databases import Databases
+from appwrite.exception import AppwriteException
 
 
 from actions import create_account
@@ -14,7 +15,8 @@ APPWRITE_KEY: str = "standard_d1d2a406cd91ce7a92c3bceaf25fed79bc3666a437b2f842ed
 
 client = Client()
 client.set_endpoint('https://cloud.appwrite.io/v1')
-client.set_project(APPWRITE_KEY) 
+client.set_project("67c8048d0000b428658b")
+client.set_key(APPWRITE_KEY) 
 
 users = Users(client)
 
@@ -27,7 +29,9 @@ async def check_balance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
   
   start_buttons = [
-    [InlineKeyboardButton("Get Started",callback_data="get_started_btn")]
+    [InlineKeyboardButton("Help",callback_data="help_callback"), InlineKeyboardButton("Balance", callback_data="balance_callback")],
+    [InlineKeyboardButton("Join Community", url="https://t.me/taskmastercommunity")],
+    [InlineKeyboardButton("Get Task", callback_data="get_task_callback")]
   ]
   
   start_markup = InlineKeyboardMarkup(start_buttons)
@@ -35,13 +39,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
   
   reply_markup = InlineKeyboardMarkup(start_buttons)
 
-  response = await create_account(users, str(update.message.from_user.id), update.message.from_user.first_name)
+  first_name = update.message.from_user.first_name
+  
+  try:
+    response = await create_account(users, str(update.message.from_user.id), first_name)
 
-  print(response)
-  await update.message.reply_text(
-        "Welcome to TaskMaster! Please choose an option:",
+    await update.message.reply_text(
+        f"Hello {first_name}, welcome to TaskMaster, We provide a way to earn money through tasks, We support a variery of commands to ensure simplicity",
         reply_markup=reply_markup
     )
+
+    
+  except AppwriteException as e:
+    if e.code == 409:
+      await update.message.reply_text(f"Welcome back, {first_name}", reply_markup=reply_markup)
+
+    else: 
+      await update.message.reply_text("Something went wrong, please try again later")
+
+  
+  
+      
   
   
   # first_name: str = update.message.chat.first_name
@@ -53,8 +71,7 @@ async def listen_for_button_callback(update: Update, context: ContextTypes.DEFAU
   query = update.callback_query
   await query.answer()
   
-  if query.data == "get_started_btn":
-    await query.message.reply_text("Hello again, welcome to TaskMaster, We provide a way to earn money through tasks, We support a variery of commands to ensure simplicity.")
+  
   
   
 def main():
